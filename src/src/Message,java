@@ -1,0 +1,135 @@
+package com.mycompany.prog5121_part2;
+
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Random;
+
+public final class Message {
+    private String messageID;
+    private int numMessagesSent;
+    private String recipientCell;
+    private String messageText;
+    private String messageHash;
+    private String sendOptionStatus;
+
+    public Message(String recipientCell, String messageText, int numMessagesSent) {
+        this.recipientCell = recipientCell;
+        this.messageText = messageText;
+        this.numMessagesSent = numMessagesSent;
+        this.messageID = generateMessageID();
+        this.messageHash = createMessageHash();
+    }
+
+    // 1. Generate unique Message ID 
+    public String generateMessageID() {
+        Random rand = new Random();
+        long randomNum = (long)(rand.nextDouble() * 9000000000L) + 1000000000L;
+        return String.valueOf(randomNum);
+    }
+
+    // 2. checkMessageID(): ensures message ID is not more than 10 characters
+    public boolean checkMessageID() {
+        return this.messageID != null && this.messageID.length() <= 10;
+    }
+
+    // 3. checkRecipientCell(): ensures recipient cell number has international code and max length criteria
+    public boolean checkRecipientCell() {
+        if (this.recipientCell == null) return false;
+        boolean startsWithCode = this.recipientCell.startsWith("+") || this.recipientCell.startsWith("0");
+        boolean validLength = this.recipientCell.length() <= 12; // Accommodating international format (+27...)
+        return startsWithCode && validLength;
+    }
+
+    public String getRecipientCellStatus() {
+        if (checkRecipientCell()) {
+            return "Cell phone number successfully captured.";
+        } else {
+            return "Cell phone number is incorrectly formatted or does not contain an international code. Please correct the number and try again.";
+        }
+    }
+
+    // 4. checkMessageLength(): returns exact strings required by POE test assertions
+    public String checkMessageLengthStatus() {
+        if (this.messageText == null) {
+            return "Message exceeds 250 characters by 0; please reduce the size.";
+        }
+        if (this.messageText.length() <= 250) {
+            return "Message ready to send.";
+        } else {
+            int excess = this.messageText.length() - 250;
+            return "Message exceeds  " + excess + " characters; please reduce the size."; // Matches rubric wording structure
+        }
+    }
+
+    public boolean checkMessageLength() {
+        return this.messageText != null && this.messageText.length() <= 250;
+    }
+
+    // 5. createMessageHash(): first two numbers of ID, colon, number of message, colon, first and last words
+    public String createMessageHash() {
+        String firstTwoID = messageID != null && messageID.length() >= 2 ? messageID.substring(0, 2) : "00";
+        String firstWord = "";
+        String lastWord = "";
+
+        if (messageText != null && !messageText.trim().isEmpty()) {
+            String[] words = messageText.trim().split("\\s+");
+            firstWord = words[0];
+            lastWord = words[words.length - 1];
+        }
+
+        return (firstTwoID + ":" + (numMessagesSent - 1) + ":" + firstWord + ":" + lastWord).toUpperCase();
+    }
+
+    // 6. sendMessage(): allow user to choose send, store, or disregard[span_13]
+    public String sendMessage(int choice) {
+        switch (choice) {
+            case 1 -> {
+                this.sendOptionStatus = "Message successfully sent.";
+                return this.sendOptionStatus;
+            }
+            case 2 -> {
+                this.sendOptionStatus = "Press 0 to delete the message.";
+                return this.sendOptionStatus;
+            }
+            case 3 -> {
+                this.sendOptionStatus = "Message successfully stored.";
+                storeMessage();
+                return this.sendOptionStatus;
+            }
+            default -> {
+                return "Invalid selection.";
+            }
+        }
+    }
+
+    // 7. storeMessage(): Store message in a JSON file[span_15]
+    public void storeMessage() {
+        String jsonPayload = "{\n" +
+                "  \"messageID\": \"" + this.messageID + "\",\n" +
+                "  \"numSent\": " + this.numMessagesSent + ",\n" +
+                "  \"recipient\": \"" + this.recipientCell + "\",\n" +
+                "  \"message\": \"" + this.messageText + "\",\n" +
+                "  \"hash\": \"" + this.messageHash + "\"\n" +
+                "}";
+
+        try (FileWriter writer = new FileWriter("message_" + this.messageID + ".json")) {
+            writer.write(jsonPayload);
+        } catch (IOException e) {
+            System.out.println("Error saving message to JSON.");
+        }
+    }
+
+    // 8. printMessages(): returns details of the message[span_16]
+    public String printMessages() {
+        return "Message ID: " + messageID + 
+               "\nMessage Hash: " + messageHash + 
+               "\nRecipient: " + recipientCell + 
+               "\nMessage: " + messageText;
+    }
+
+    // Getters
+    public String getMessageID() { return messageID; }
+    public String getMessageHash() { return messageHash; }
+    public String getRecipientCell() { return recipientCell; }
+    public String getMessageText() { return messageText; }
+}
